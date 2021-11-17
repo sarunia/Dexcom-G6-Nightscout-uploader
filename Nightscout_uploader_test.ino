@@ -52,7 +52,7 @@ void postDataToServer()
     https.addHeader("Content-Type", "application/json");         
     StaticJsonDocument<200> doc;
     doc["device"] = "Test-G6-upload";                                 //Dexcom G6 device name
-  doc["secret"] = "d6026bb45e7efd38de82680c75d31cf7f7a6a1e3";         //API secret encoded to SHA-1 http://www.sha1-online.com/
+    doc["secret"] = "d6026bb45e7efd38de82680c75d31cf7f7a6a1e3";       //API secret encoded to SHA-1 http://www.sha1-online.com/
     doc["sgv"] = 112;                                                 //BG value
     doc["date"] = epochTime;                                          //epoch time in miliseconds https://www.epochconverter.com/clock
     doc["direction"] = "Flat";                   
