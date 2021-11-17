@@ -3,8 +3,8 @@
 #include <WiFiMulti.h>
 #include "time.h"
 
-const char *AP_SSID = "brakdostepu";                  // WiFi SSID
-const char *AP_PWD = "malinowykrul1977comeback";      // WiFi password
+const char *AP_SSID = "SSID";                         // WiFi SSID
+const char *AP_PWD = "password";                      // WiFi password
 const char* ntpServer = "0.pl.pool.ntp.org";          // NTP server to request epoch time (for example Poland zone)
 
 unsigned long long epochTime;                         // Variable to save current epoch time
