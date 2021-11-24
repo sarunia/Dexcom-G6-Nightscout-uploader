@@ -9,4 +9,4 @@ plus additional uploader source code:
 
 https://github.com/sarunia/Dexcom-G6-Nightscout-uploader/blob/main/ESP32_Reader.ino
 
-enter your own parameters: wifi network name and password, traansmitter IG, Nightscout site and API secret
+enter your own parameters: wifi network name and password, transmitter ID, Nightscout site and API secret
