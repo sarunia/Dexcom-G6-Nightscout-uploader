@@ -14,8 +14,7 @@
  * Author: Max Kaiser
  * Copyright (c) 2020
  * 28.05.2020
- */
-
+ * Nightscout prototype uploader by Sarunia */
  
 //poniżej moje 4 linie include
 #include <ArduinoJson.h>
