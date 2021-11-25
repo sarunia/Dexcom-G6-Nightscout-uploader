@@ -114,7 +114,7 @@ void postDataToServer()
     https.addHeader("Content-Type", "application/json");         
     doc["device"] = "Test-G6-upload";                                   //Dexcom G6 device name
     doc["secret"] = "1231231231231231231231231231231231231231";         //API secret encoded to SHA-1 http://www.sha1-online.com/
-    doc["sgv"] = glucoseValues[i];										//glucose value
+    doc["sgv"] = glucoseValues[i];										                            //glucose value
     doc["date"] = epochTime;                                            //epoch time in miliseconds https://www.epochconverter.com/clock
     doc["direction"] = "Flat";                   
     String requestBody;
