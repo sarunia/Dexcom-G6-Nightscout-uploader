@@ -87,7 +87,6 @@ static BLEAdvertisedDevice* myDevice = NULL;                                    
 static BLEClient* pClient = NULL;                                                                                       // Is global so we can disconnect everywhere when an error occured.
 
 //poniżej moje deklaracje i funkcje
-uint16_t BG_from_G6 = 0;
 const char *AP_SSID = "xxxxxxxxxxx";                  // WiFi SSID
 const char *AP_PWD = "yyyyyyyyyyyyyyyyyyyyyyyy";      // WiFi password
 const char* ntpServer = "0.pl.pool.ntp.org";          // NTP server to request epoch time (for example Poland zone)
