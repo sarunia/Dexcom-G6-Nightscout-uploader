@@ -14,7 +14,8 @@
  * Author: Max Kaiser
  * Copyright (c) 2020
  * 28.05.2020
- * Nightscout prototype uploader by Sarunia */
+ * Nightscout uploader by Sarunia*/
+
  
 //poniżej moje 4 linie include
 #include <ArduinoJson.h>
@@ -27,11 +28,11 @@
 #include "BLEScan.h"
 #include "Output.h"
 
-#define STATE_START_SCAN 0                                                                                              // Set this state to start the scan.
-#define STATE_SCANNING   1                                                                                              // Indicates the esp is currently scanning for devices.
-#define STATE_SLEEP      2                                                                                              // Finished with reading data from the transmitter.
+#define STATE_START_SCAN 0                                                  // Set this state to start the scan.
+#define STATE_SCANNING   1                                                  // Indicates the esp is currently scanning for devices.
+#define STATE_SLEEP      2                                                  // Finished with reading data from the transmitter.
 
-static int Status      = 0;                                                                                             // Set to 0 to automatically start scanning when esp has started.
+static int Status      = 0;                                                 // Set to 0 to automatically start scanning when esp has started.
 
 // The remote service we wish to connect to.
 static BLEUUID    serviceUUID("f8083532-849e-531c-c594-30f1f86a4ea5");                                                  // This service holds all the important characteristics.
@@ -50,7 +51,7 @@ static BLEUUID        modelUUID("2A24"); // READ
 static BLEUUID     firmwareUUID("2A26"); // READ
 
 
-static std::string transmitterID = "8ABC12";              /* Set here your transmitter ID */                            // This transmitter ID is used to identify our transmitter if multiple dexcom transmitters are found.
+static std::string transmitterID = "8SQ123";              /* Set here your transmitter ID */                            // This transmitter ID is used to identify our transmitter if multiple dexcom transmitters are found.
 static boolean useAlternativeChannel = true;      /* Enable when used concurrently with xDrip / Dexcom CGM */           // Tells the transmitter to use the alternative bt channel.
 static boolean bonding = false;                                                                                         // Gets set by Auth handshake "StatusRXMessage" and shows if the transmitter would like to bond with the client.
 static boolean force_rebonding = false;               /* Enable when problems with connecting */                        // When true: disables bonding before auth handshake. Enables bonding after successful authenticated (and before bonding command) so transmitter then can initiate bonding.
@@ -106,23 +107,28 @@ WiFiMulti wifiMulti;
 void postDataToServer()
 {
   Serial.println("Posting JSON data to server...");
-  HTTPClient https;   
-  https.begin("https://zzzzzzzzzzzz.herokuapp.com/api/v1/entries");   //https://your-NS-site.herokuapp.com/api/v1/entries
-  https.addHeader("Content-Type", "application/json");         
   StaticJsonDocument<200> doc;
-  doc["device"] = "Test-G6-upload";                                   //Dexcom G6 device name
-  doc["secret"] = "1234567890abcdefghijklmnopqrstuvwxyz1234";         //API secret encoded to SHA-1 http://www.sha1-online.com/
-  doc["sgv"] = BG_from_G6;                                            //BG value
-  doc["date"] = epochTime;                                            //epoch time in miliseconds https://www.epochconverter.com/clock
-  doc["direction"] = "Flat";                   
-  String requestBody;
-  serializeJson(doc, requestBody);
-  int httpResponseCode = https.POST(requestBody);
-  if(httpResponseCode>0)                                              //if site response
-  {
-    String response = https.getString();                       
-    Serial.println(httpResponseCode);   
-    Serial.println(response);
+  HTTPClient https;  
+  for ( int i = 0; i < saveLastXValues; i++)
+  { 
+    https.begin("https://your-NS-site.herokuapp.com/api/v1/entries");   //https://your-NS-site.herokuapp.com/api/v1/entries
+    https.addHeader("Content-Type", "application/json");         
+    doc["device"] = "Test-G6-upload";                                   //Dexcom G6 device name
+    doc["secret"] = "1231231231231231231231231231231231231231";         //API secret encoded to SHA-1 http://www.sha1-online.com/
+    doc["sgv"] = glucoseValues[i];										//glucose value
+    doc["date"] = epochTime;                                            //epoch time in miliseconds https://www.epochconverter.com/clock
+    doc["direction"] = "Flat";                   
+    String requestBody;
+    serializeJson(doc, requestBody);
+    int httpResponseCode = https.POST(requestBody);
+    if(httpResponseCode>0)                                              //if site response
+    {
+      String response = https.getString();                       
+      Serial.println(httpResponseCode);   
+      Serial.println(response);
+    }
+    delay(5000);
+    epochTime = epochTime - 300000;
   }
 }
 //powyżej moje deklaracje i funkcje
