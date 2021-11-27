@@ -14,10 +14,11 @@
  * Author: Max Kaiser
  * Copyright (c) 2020
  * 28.05.2020
- * Nightscout uploader by Sarunia*/
+ *
+ * plus added Nightscout uploader by sarunia*/
 
  
-/*include for Nightscout uploader by sarunia*/
+/*include for Nightscout uploader*/
 #define ARDUINOJSON_USE_LONG_LONG 1
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
@@ -479,7 +480,7 @@ bool run()
     //Let the Transmitter close the connection.
     //sendDisconnect();
  
-    /*BLE stop, WiFi start and json upload*/
+    /*BLE stop, WiFi start and json upload to Nightscout site for test only*/
     btStop();
     wifiMulti.addAP(AP_SSID, AP_PWD);
     delay(5000);
