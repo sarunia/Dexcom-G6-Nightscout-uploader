@@ -117,7 +117,7 @@ void postDataToServer()
   HTTPClient https;
 
   {
-    https.begin("https://your-NS-site.herokuapp.com/api/v1/devicestatus");  //https://your-NS-site.herokuapp.com/api/v1/entries
+    https.begin("https://your-NS-site.herokuapp.com/api/v1/devicestatus");  //https://your-NS-site.herokuapp.com/api/v1/devicestatus
     https.addHeader("Content-Type", "application/json");
     doc["secret"] = "ssssssssssssssssssssssssssssssssssssssss";             //API secret encoded to SHA-1 http://www.sha1-online.com/
     doc["date"] = epochTime;                                                //epoch time in miliseconds https://www.epochconverter.com/clock
@@ -138,7 +138,7 @@ void postDataToServer()
     String requestBody;
     serializeJson(doc, requestBody);
     int httpResponseCode = https.POST(requestBody);
-    if(httpResponseCode>0)                                              //if site response
+    if(httpResponseCode>0)
     {
       String response = https.getString();                       
       Serial.println(httpResponseCode);   
@@ -148,17 +148,17 @@ void postDataToServer()
   
   for ( int i = 0; i < saveLastXValues; i++)
   { 
-    https.begin("https://your-NS-site.herokuapp.com/api/v1/devicestatus");  //https://your-NS-site.herokuapp.com/api/v1/entries
+    https.begin("https://your-NS-site.herokuapp.com/api/v1/entries");   //https://your-NS-site.herokuapp.com/api/v1/entries
     https.addHeader("Content-Type", "application/json");
-    doc["secret"] = "ssssssssssssssssssssssssssssssssssssssss";             //API secret encoded to SHA-1 http://www.sha1-online.com/
+    doc["secret"] = "ssssssssssssssssssssssssssssssssssssssss";         //API secret encoded to SHA-1 http://www.sha1-online.com/
     doc["device"] = "ESP32-Dexcom-G6";
     doc["sgv"] = glucoseValues[i];                                      //glucose value
     doc["date"] = epochTime;                                            //epoch time in miliseconds https://www.epochconverter.com/clock
-    doc["direction"] = "Flat";                   
+    doc["direction"] = "Flat";                                          //Flat for test only
     String requestBody;
     serializeJson(doc, requestBody);
     int httpResponseCode = https.POST(requestBody);
-    if(httpResponseCode>0)                                              //if site response
+    if(httpResponseCode>0)
     {
       String response = https.getString();                       
       Serial.println(httpResponseCode);   
@@ -479,7 +479,7 @@ bool run()
     //Let the Transmitter close the connection.
     //sendDisconnect();
  
-///// PONIŻEJ OBSŁUGA UPLOADERA ODCZYTY Z DEXCOM G6 /////
+    /*BLE stop, WiFi start and json upload*/
     btStop();
     wifiMulti.addAP(AP_SSID, AP_PWD);
     delay(5000);
@@ -496,7 +496,6 @@ bool run()
     delay(260000);
     ESP.restart();
 }
-///// POWYŻEJ OBSŁUGA UPLOADERA ODCZYTU Z DEXCOM G6 /////
 
 
 /**
