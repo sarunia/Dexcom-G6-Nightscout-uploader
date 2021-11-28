@@ -113,7 +113,7 @@ unsigned long long getTime()                          // Function that gets curr
   return (((unsigned long long)now) * 1000);
 }
 
-void postDataToServer()
+void postDataToServer()				      // Function that post json data to Nightscout
 {
   Serial.println("Posting JSON data to server...");
   StaticJsonDocument<400> doc;
@@ -168,9 +168,8 @@ void postDataToServer()
       Serial.println(httpResponseCode);   
       Serial.println(response);
     }
-    delay(500);
     epochTime = epochTime - 300000;
-	digitalWrite(ONBOARD_LED,LOW);										//blue LED blink
+    digitalWrite(ONBOARD_LED,LOW);					//blue LED blink
     delay(250);
     digitalWrite(ONBOARD_LED,HIGH);
     delay(250);
