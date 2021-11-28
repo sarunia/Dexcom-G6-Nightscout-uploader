@@ -19,6 +19,7 @@
 
  
 /*include for Nightscout uploader*/
+#define ONBOARD_LED  2														//blue LED on board
 #define ARDUINOJSON_USE_LONG_LONG 1
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
@@ -169,6 +170,10 @@ void postDataToServer()
     }
     delay(500);
     epochTime = epochTime - 300000;
+	digitalWrite(ONBOARD_LED,LOW);										//blue LED blink
+    delay(250);
+    digitalWrite(ONBOARD_LED,HIGH);
+    delay(250);
   }
   
 }
@@ -405,6 +410,7 @@ bool needBackfill()
  */
 void setup() 
 {
+	pinMode(ONBOARD_LED,OUTPUT);				//blue LED on board
     Serial.begin(115200);
     wakeUpRoutine();
     SerialPrintln(DEBUG, "Starting ESP32 dexcom client application...");
@@ -430,8 +436,8 @@ void ExitState(std::string message)
  */
 bool run()
 {
-    error_current_connection = true;                                                                                    // Set to true to mark a potential error if it does not get set to false after successfully transmitter communication.
-
+    error_current_connection = true; 																					// Set to true to mark a potential error if it does not get set to false after successfully transmitter communication.
+	digitalWrite(ONBOARD_LED,HIGH);
     if(!force_rebonding)
         setup_bonding();                                                                                                // Enable bonding from the start on, so transmitter does not want to (re)bond.
 
@@ -496,6 +502,7 @@ bool run()
       postDataToServer();
     }
     WiFi.mode(WIFI_OFF);
+	digitalWrite(ONBOARD_LED,LOW);
     delay(260000);
     ESP.restart();
 }
