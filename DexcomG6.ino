@@ -148,11 +148,13 @@ bool readBatteryStatus()
         SerialPrintf(DATA, "Battery - Resistance:  %d\n", (uint16_t)(batteryStatusRxMessage[6] + batteryStatusRxMessage[7]*0x100));
         SerialPrintf(DATA, "Battery - Runtime:     %d\n", (uint8_t)batteryStatusRxMessage[8]);
         SerialPrintf(DATA, "Battery - Temperature: %d\n", (uint8_t)batteryStatusRxMessage[9]);
+        battTemp = batteryStatusRxMessage[9];
     }
     else if(batteryStatusRxMessage.length() == 10)                                                                      // G6 Plus Transmitter.
     {
         SerialPrintf(DATA, "Battery - Runtime:     %d\n", (uint8_t)batteryStatusRxMessage[6]);
         SerialPrintf(DATA, "Battery - Temperature: %d\n", (uint8_t)batteryStatusRxMessage[7]);
+        battTemp = batteryStatusRxMessage[7];
     }
     return true;
 }
