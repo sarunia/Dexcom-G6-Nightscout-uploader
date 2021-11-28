@@ -444,7 +444,10 @@ bool run()
     if (!connectToTransmitter())                                                                                        // Connect to the found transmitter.
         ExitState("We have failed to connect to the transmitter!");
     else
+    {
         SerialPrintln(DEBUG, "We are now connected to the transmitter.");
+        digitalWrite(ONBOARD_LED,HIGH);                                              //blue LED on when transmitter connected
+    }
     
     if(!readDeviceInformations())                                                                                       // Read the general device informations like model no. and manufacturer.
         SerialPrintln(DEBUG, "Error while reading device informations!");                                               // If empty strings are read from the device information Characteristic, try reading device information after successfully authenticated. 
