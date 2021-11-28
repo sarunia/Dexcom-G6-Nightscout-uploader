@@ -126,7 +126,7 @@ void postDataToServer()
     doc["device"] = "ESP32-Dexcom-G6";
     doc["pump"]["extended"]["Battery Voltage A"] = batt_A;
     doc["pump"]["extended"]["Battery Voltage B"] = batt_B;
-	doc["pump"]["extended"]["Battery Temperature"] = battTemp;
+    doc["pump"]["extended"]["Battery Temperature"] = battTemp;
     doc["pump"]["extended"]["Transmitter time since activation (seconds)"] = currentTime;
     doc["pump"]["extended"]["Transmitter days"] = currentTime / (60*60*24);
     doc["pump"]["extended"]["Transmitter hours"] = (currentTime / (60*60)) % 24;
