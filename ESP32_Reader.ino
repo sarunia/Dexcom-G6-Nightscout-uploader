@@ -93,6 +93,7 @@ const char *AP_SSID = "xxxxxxxxxxx";                  // WiFi SSID
 const char *AP_PWD = "yyyyyyyyyyyyyyyyyyyyyyyy";      // WiFi password
 const char* ntpServer = "0.pl.pool.ntp.org";          // NTP server to request epoch time (for example Poland zone)
 int trend;
+uint8_t battTemp;
 uint16_t batt_A, batt_B, calibration;
 uint32_t currentTime, sessionStartTime, calibrationTime;
 unsigned long long epochTime;                         // Variable to save current epoch time
@@ -125,6 +126,7 @@ void postDataToServer()
     doc["device"] = "ESP32-Dexcom-G6";
     doc["pump"]["extended"]["Battery Voltage A"] = batt_A;
     doc["pump"]["extended"]["Battery Voltage B"] = batt_B;
+	doc["pump"]["extended"]["Battery Temperature"] = battTemp;
     doc["pump"]["extended"]["Transmitter time since activation (seconds)"] = currentTime;
     doc["pump"]["extended"]["Transmitter days"] = currentTime / (60*60*24);
     doc["pump"]["extended"]["Transmitter hours"] = (currentTime / (60*60)) % 24;
