@@ -150,7 +150,8 @@ void postDataToServer()				      // Function that post json data to Nightscout
     } 
   }
   
-  for ( int i = 0; i < saveLastXValues; i++)
+  epochTime = epochTime - 3300000;
+  for ( int i = 11; i >= 0; i--)
   { 
     https.begin("https://your-NS-site.herokuapp.com/api/v1/entries");   //https://your-NS-site.herokuapp.com/api/v1/entries
     https.addHeader("Content-Type", "application/json");
@@ -168,7 +169,7 @@ void postDataToServer()				      // Function that post json data to Nightscout
       Serial.println(httpResponseCode);   
       Serial.println(response);
     }
-    epochTime = epochTime - 300000;
+    epochTime = epochTime + 300000;
     digitalWrite(ONBOARD_LED,LOW);					//blue LED blink
     delay(250);
     digitalWrite(ONBOARD_LED,HIGH);
