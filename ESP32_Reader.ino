@@ -19,7 +19,7 @@
 
  
 /*include for Nightscout uploader*/
-#define ONBOARD_LED  2														//blue LED on board
+#define ONBOARD_LED  2							     //blue LED on board
 #define ARDUINOJSON_USE_LONG_LONG 1
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
@@ -113,7 +113,7 @@ unsigned long long getTime()                          // Function that gets curr
   return (((unsigned long long)now) * 1000);
 }
 
-void postDataToServer()				      // Function that post json data to Nightscout
+void postDataToServer()				                            // Function that post json data to Nightscout
 {
   Serial.println("Posting JSON data to server...");
   StaticJsonDocument<400> doc;
@@ -410,7 +410,7 @@ bool needBackfill()
  */
 void setup() 
 {
-	pinMode(ONBOARD_LED,OUTPUT);				//blue LED on board
+    pinMode(ONBOARD_LED,OUTPUT);				//blue LED on board
     Serial.begin(115200);
     wakeUpRoutine();
     SerialPrintln(DEBUG, "Starting ESP32 dexcom client application...");
@@ -446,7 +446,7 @@ bool run()
     else
     {
         SerialPrintln(DEBUG, "We are now connected to the transmitter.");
-        digitalWrite(ONBOARD_LED,HIGH);                                              //blue LED on when transmitter connected
+        digitalWrite(ONBOARD_LED,HIGH);                                                                                 //blue LED on when transmitter connected
     }
     
     if(!readDeviceInformations())                                                                                       // Read the general device informations like model no. and manufacturer.
@@ -505,7 +505,7 @@ bool run()
       postDataToServer();
     }
     WiFi.mode(WIFI_OFF);
-	digitalWrite(ONBOARD_LED,LOW);
+    digitalWrite(ONBOARD_LED,LOW);
     delay(260000);
     ESP.restart();
 }
