@@ -493,11 +493,16 @@ bool run()
  
     /*BLE stop, WiFi start and json upload to Nightscout site for test only*/
     btStop();
+    Serial.print("Connecting to WiFi...\r\n");
     wifiMulti.addAP(AP_SSID, AP_PWD);
-    delay(5000);
+    delay(15000);
     if (wifiMulti.run() == WL_CONNECTED)
     {
       Serial.print("WiFi connected\r\n");
+      Serial.print("ESP32 IP Address: ");
+      Serial.println(WiFi.localIP());
+      Serial.print("ESP32 MAC Address: ");
+      Serial.println(WiFi.macAddress());
       configTime(0, 0, ntpServer);
       epochTime = (unsigned long long)getTime();
       Serial.print("Epoch Time: ");
@@ -506,7 +511,7 @@ bool run()
     }
     WiFi.mode(WIFI_OFF);
     digitalWrite(ONBOARD_LED,LOW);
-    delay(260000);
+    delay(250000);
     ESP.restart();
 }
 
