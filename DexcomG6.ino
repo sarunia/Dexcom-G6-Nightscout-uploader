@@ -204,7 +204,14 @@ bool readGlucose()
     SerialPrintf(GLUCOSE, "Glucose - Glucose:     %d\n", glucose);
     SerialPrintf(DATA, "Glucose - State:       %d\n", state);
     SerialPrintf(DATA, "Glucose - Trend:       %d\n", trend);
-
+    display.clearDisplay();
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 20);
+    display.println("BG = ");
+    display.setCursor(50, 20);
+    display.println(glucose);
+    display.display();
     if(saveLastXValues > 0)                                                                                             // Array is big enouth for min one value.
     {
         for(int i = saveLastXValues - 1; i > 0; i--)                                                                    // Shift all old values back to set the newest to position 0.

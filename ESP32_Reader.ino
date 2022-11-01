@@ -14,17 +14,25 @@
  * Author: Max Kaiser
  * Copyright (c) 2020
  * 28.05.2020
- *
- * plus added Nightscout uploader by sarunia*/
+ * 
+ * 
+ * Nightscout uploader by Sarunia*/
 
  
-/*include for Nightscout uploader*/
-#define ONBOARD_LED  2							     //blue LED on board
+/*include for Nightscout uploader and display by sarunia*/
+#define ONBOARD_LED  2
 #define ARDUINOJSON_USE_LONG_LONG 1
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 #include <WiFiMulti.h>
 #include "time.h"
+#include <WiFi.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+#include <neotimer.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
 
 #include "BLEDevice.h"
@@ -34,6 +42,11 @@
 #define STATE_START_SCAN 0                                                  // Set this state to start the scan.
 #define STATE_SCANNING   1                                                  // Indicates the esp is currently scanning for devices.
 #define STATE_SLEEP      2                                                  // Finished with reading data from the transmitter.
+
+
+//obsługa wyświetlacza
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
 
 static int Status      = 0;                                                 // Set to 0 to automatically start scanning when esp has started.
 
@@ -54,7 +67,7 @@ static BLEUUID        modelUUID("2A24"); // READ
 static BLEUUID     firmwareUUID("2A26"); // READ
 
 
-static std::string transmitterID = "8S1234";              /* Set here your transmitter ID */                            // This transmitter ID is used to identify our transmitter if multiple dexcom transmitters are found.
+static std::string transmitterID = "8U1234";              /* Set here your transmitter ID */                            // This transmitter ID is used to identify our transmitter if multiple dexcom transmitters are found.
 static boolean useAlternativeChannel = true;      /* Enable when used concurrently with xDrip / Dexcom CGM */           // Tells the transmitter to use the alternative bt channel.
 static boolean bonding = false;                                                                                         // Gets set by Auth handshake "StatusRXMessage" and shows if the transmitter would like to bond with the client.
 static boolean force_rebonding = false;               /* Enable when problems with connecting */                        // When true: disables bonding before auth handshake. Enables bonding after successful authenticated (and before bonding command) so transmitter then can initiate bonding.
@@ -89,17 +102,104 @@ static BLERemoteCharacteristic* pRemoteFirmware;                                
 static BLEAdvertisedDevice* myDevice = NULL;                                                                            // The remote device (transmitter) found by the scan and set by scan callback function.
 static BLEClient* pClient = NULL;                                                                                       // Is global so we can disconnect everywhere when an error occured.
 
-//poniżej moje deklaracje i funkcje
-const char *AP_SSID = "xxxxxxxxxxx";                  // WiFi SSID
-const char *AP_PWD = "yyyyyyyyyyyyyyyyyyyyyyyy";      // WiFi password
+
+const unsigned char bitmapaNS [] = {
+0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x00, 0x00, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x07, 0xe0, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0x7f, 0xfe, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc1, 0xff, 0xff, 0x83, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x83, 0xfc, 0x3f, 0xc1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x07, 0xc0, 0x03, 0xe0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x0f, 0x80, 0x01, 0xf0, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x1e, 0x00, 0x00, 0x78, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x3c, 0x00, 0x00, 0x3c, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x78, 0x00, 0x00, 0x1e, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x7f, 0xf0, 0x0f, 0xfe, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0xff, 0xfc, 0x3f, 0xff, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf0, 0xff, 0xfe, 0x7f, 0xff, 0x0f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf0, 0xf9, 0xcf, 0xfb, 0x9f, 0x0f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xf7, 0xf7, 0xef, 0xef, 0x8f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xef, 0xfb, 0xff, 0xf7, 0x8f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xdf, 0x7b, 0xde, 0xfb, 0x8f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xdc, 0x3b, 0xdc, 0x3b, 0x8f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xdc, 0x1f, 0xf8, 0x3b, 0x8f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xdc, 0x3f, 0xfc, 0x3b, 0x8f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xde, 0x3b, 0xdc, 0x7b, 0x8f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xcf, 0xfb, 0xdf, 0xf3, 0x8f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xef, 0xf3, 0xcf, 0xf7, 0x8f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xe3, 0xe3, 0xc7, 0xc7, 0x8f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf0, 0xe0, 0x03, 0xc0, 0x07, 0x0f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf0, 0xf0, 0x03, 0xc0, 0x0f, 0x0f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0xf8, 0x01, 0x80, 0x1f, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0xf8, 0x00, 0x00, 0x1f, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x7c, 0x00, 0x00, 0x3e, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x7f, 0x00, 0x00, 0xfe, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x7f, 0x80, 0x01, 0xfe, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x3f, 0xe0, 0x07, 0xfc, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x3f, 0xff, 0xff, 0xfc, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x1c, 0xff, 0xff, 0x38, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x1e, 0x3f, 0xfc, 0x78, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0e, 0x07, 0x00, 0x70, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x8f, 0x0f, 0x00, 0xf1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x87, 0x9e, 0x01, 0xe1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc7, 0x9e, 0x01, 0xe3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc3, 0xfc, 0x03, 0xc3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe1, 0xf8, 0x07, 0x87, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xf8, 0x07, 0x8f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf0, 0xf0, 0x0f, 0x0f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x78, 0x1e, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x3c, 0x3c, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x1e, 0x78, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x1f, 0xf8, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0f, 0xf0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x87, 0xe1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc3, 0xc3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe1, 0x87, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf0, 0x0f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+};
+
+
+
+//declarations and functions for Nightscout uploader and OLED display
+const char *AP_SSID = "NAZWA SIECI WIFI";                  // WiFi SSID
+const char *AP_PWD = "HASLO SIECI WIFI";      // WiFi password
 const char* ntpServer = "0.pl.pool.ntp.org";          // NTP server to request epoch time (for example Poland zone)
 int trend;
 uint8_t battTemp;
 uint16_t batt_A, batt_B, calibration;
 uint32_t currentTime, sessionStartTime, calibrationTime;
 unsigned long long epochTime;                         // Variable to save current epoch time
-
+uint8_t timer_1s;
+volatile uint16_t time_up = 0;
+// Variables to save date and time
+String formattedDate;
+String dayStamp;
+String timeStamp;
 WiFiMulti wifiMulti;
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP);
+Neotimer mytimer = Neotimer(1000); // 1 second timer
+hw_timer_t *My_timer = NULL;
+
+void IRAM_ATTR onTimer()
+{
+  digitalWrite(ONBOARD_LED, !digitalRead(ONBOARD_LED));
+  //timer_1s = 1;
+  time_up++;
+}
 
 unsigned long long getTime()                          // Function that gets current epoch time
 {
@@ -113,16 +213,15 @@ unsigned long long getTime()                          // Function that gets curr
   return (((unsigned long long)now) * 1000);
 }
 
-void postDataToServer()				                            // Function that post json data to Nightscout
+void postDataToServer()
 {
   Serial.println("Posting JSON data to server...");
   StaticJsonDocument<400> doc;
   HTTPClient https;
-
   {
-    https.begin("https://your-NS-site.herokuapp.com/api/v1/devicestatus");  //https://your-NS-site.herokuapp.com/api/v1/devicestatus
+    https.begin("https://TESTSTRONY.herokuapp.com/api/v1/devicestatus");  //https://your-NS-site.herokuapp.com/api/v1/devicestatus
     https.addHeader("Content-Type", "application/json");
-    doc["secret"] = "ssssssssssssssssssssssssssssssssssssssss";             //API secret encoded to SHA-1 http://www.sha1-online.com/
+    doc["secret"] = "d6026bb45e7ef4247e82680c75d31cf7f7a6a1e3";             //API secret encoded to SHA-1 http://www.sha1-online.com/
     doc["date"] = epochTime;                                                //epoch time in miliseconds https://www.epochconverter.com/clock
     doc["device"] = "ESP32-Dexcom-G6";
     doc["pump"]["extended"]["Battery Voltage A"] = batt_A;
@@ -142,40 +241,47 @@ void postDataToServer()				                            // Function that post jso
     String requestBody;
     serializeJson(doc, requestBody);
     int httpResponseCode = https.POST(requestBody);
-    if(httpResponseCode>0)
+    if(httpResponseCode>0)                                              //if site response
     {
       String response = https.getString();                       
       Serial.println(httpResponseCode);   
       Serial.println(response);
     } 
   }
-  
   epochTime = epochTime - 3300000;
   for ( int i = 11; i >= 0; i--)
   { 
-    https.begin("https://your-NS-site.herokuapp.com/api/v1/entries");   //https://your-NS-site.herokuapp.com/api/v1/entries
+    https.begin("https://TESTSTRONY.herokuapp.com/api/v1/entries");  	//https://your-NS-site.herokuapp.com/api/v1/entries
     https.addHeader("Content-Type", "application/json");
-    doc["secret"] = "ssssssssssssssssssssssssssssssssssssssss";         //API secret encoded to SHA-1 http://www.sha1-online.com/
+    doc["secret"] = "d6026bb45e7ef4247e82680c75d31cf7f7a6a1e3";         //API secret encoded to SHA-1 http://www.sha1-online.com/
     doc["device"] = "ESP32-Dexcom-G6";
     doc["sgv"] = glucoseValues[i];                                      //glucose value
     doc["date"] = epochTime;                                            //epoch time in miliseconds https://www.epochconverter.com/clock
-    doc["direction"] = "Flat";                                          //Flat for test only
+    doc["direction"] = "Flat";                   
     String requestBody;
     serializeJson(doc, requestBody);
     int httpResponseCode = https.POST(requestBody);
-    if(httpResponseCode>0)
+    if(httpResponseCode>0)                                              //if site response
     {
       String response = https.getString();                       
       Serial.println(httpResponseCode);   
       Serial.println(response);
     }
+    Serial.print("Loading JSON data to Nightscout server...\r\n");
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 20);
+    display.println("  Loading JSON data  ");
+    display.setCursor(0, 35);
+    display.println(" to Nightscout server");
+    display.display();
     epochTime = epochTime + 300000;
-    digitalWrite(ONBOARD_LED,LOW);					//blue LED blink
+    digitalWrite(ONBOARD_LED,LOW);
     delay(250);
     digitalWrite(ONBOARD_LED,HIGH);
     delay(250);
   }
-  
 }
 
 
@@ -246,6 +352,7 @@ class MySecurity : public BLESecurityCallbacks
  */
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks 
 {
+    
     void onResult(BLEAdvertisedDevice advertisedDevice)                                                                 // Called for each advertising BLE server.
     {
         SerialPrint(DEBUG, "BLE Advertised Device found: ");
@@ -253,11 +360,48 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks
 
         // We have found a device, let us now see if it contains the service we are looking for.
         if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(advServiceUUID) &&              // If the advertised service is the dexcom advertise service (not the main service that contains the characteristics).
-            advertisedDevice.haveName() && advertisedDevice.getName() == ("Dexcom" + transmitterID.substr(4,2)))
+            //advertisedDevice.haveName() && advertisedDevice.getName() == ("Dexcom" + transmitterID.substr(4,2)))      //zakomentowane
+            advertisedDevice.haveName() && advertisedDevice.getName() == ("DexcomXY"))                                  //tu dopisałem na sztywno ostatnie dwa znaki ID nadajnika
         {
             BLEDevice::getScan()->stop();                                                                               // We found our transmitter so stop scanning for now.
-            myDevice = new BLEAdvertisedDevice(advertisedDevice);                                                       // Save device as new copy, myDevice also triggers a state change in main loop.
+            myDevice = new BLEAdvertisedDevice(advertisedDevice);                                                      // Save device as new copy, myDevice also triggers a state change in main loop.
         }
+        /*if(mytimer.repeat())
+        {
+             while(!timeClient.update()) 
+            {
+              timeClient.forceUpdate();
+            }
+            // The formattedDate comes with the following format:
+            // 2018-05-28T16:00:13Z
+            // We need to extract date and time
+            formattedDate = timeClient.getFormattedDate();
+            Serial.println(formattedDate);
+          
+            // Extract date
+            int splitT = formattedDate.indexOf("T");
+            dayStamp = formattedDate.substring(0, splitT);
+            Serial.print("DATE: ");
+            Serial.println(dayStamp);
+            // Extract time
+            timeStamp = formattedDate.substring(splitT+1, formattedDate.length()-1);
+            Serial.print("HOUR: ");
+            Serial.println(timeStamp);
+            //display.clearDisplay();
+            //display.setTextSize(1);
+            //display.setTextColor(WHITE);
+            display.setCursor(0, 0);
+            display.println(dayStamp);
+            display.setCursor(75, 0);
+            display.println(timeStamp);
+            display.setCursor(0, 20);
+            display.println("Waiting for Dexcom G6");
+            display.setCursor(0, 35);
+            display.println("bluetooth advertising");
+            display.setCursor(0, 50);
+            display.println("  Nightscout Poland  ");
+            display.display();
+        }*/
     } 
 };
 
@@ -382,7 +526,7 @@ void wakeUpRoutine()
                 SerialPrintln(DEBUG, "Error happened in last connection so set force rebonding to true.");
             }                                                                                                           // Otherwise keep the default force_rebonding setting. (could be false or true when changed manually).
             SerialPrintln(DEBUG, "Wakeup caused by timer from hibernation.");                                           // No need to restart / reset variables because all memory is lost after hibernation.
-            printSavedGlucose();                                                                                        // Only potential values available when woke up from deep sleep.
+            printSavedGlucose();                                                                                       // Only potential values available when woke up from deep sleep.
             break;
         default :
             force_rebonding = true;                                                                                     // Force bonding when esp first started after power off (or flash).
@@ -405,22 +549,7 @@ bool needBackfill()
     return doBackfill;
 }
 
-/**
- * Set up the ESP32 ble.
- */
-void setup() 
-{
-    pinMode(ONBOARD_LED,OUTPUT);				//blue LED on board
-    Serial.begin(115200);
-    wakeUpRoutine();
-    SerialPrintln(DEBUG, "Starting ESP32 dexcom client application...");
-    BLEDevice::init("");
-    BLEScan* pBLEScan = BLEDevice::getScan();                                                                           // Retrieve a Scanner.
-    pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());                                          // Set the callback to informed when a new device was detected.
-    pBLEScan->setInterval(100); //100 works                                                                             // The time in ms how long each search intervall last. Important for fast scanning so we dont miss the transmitter waking up.
-    pBLEScan->setWindow(99); //60-99 works                                                                              // The actual time that will be searched. Interval - Window = time the esp is doing nothing (used for energy efficiency).
-    pBLEScan->setActiveScan(false);                                                                                     // Possible source of error if we cant connect to the transmitter.                                                                                    // Possible source of error if we cant connect to the transmitter.
-}
+
 
 /**
  * This function can be called in an error case.
@@ -436,8 +565,8 @@ void ExitState(std::string message)
  */
 bool run()
 {
-    error_current_connection = true; 																					// Set to true to mark a potential error if it does not get set to false after successfully transmitter communication.
-	digitalWrite(ONBOARD_LED,HIGH);
+    error_current_connection = true;                                                                                    // Set to true to mark a potential error if it does not get set to false after successfully transmitter communication.
+    
     if(!force_rebonding)
         setup_bonding();                                                                                                // Enable bonding from the start on, so transmitter does not want to (re)bond.
 
@@ -446,7 +575,7 @@ bool run()
     else
     {
         SerialPrintln(DEBUG, "We are now connected to the transmitter.");
-        digitalWrite(ONBOARD_LED,HIGH);                                                                                 //blue LED on when transmitter connected
+        digitalWrite(ONBOARD_LED,HIGH);                                              //blue LED on when transmitter connected
     }
     
     if(!readDeviceInformations())                                                                                       // Read the general device informations like model no. and manufacturer.
@@ -473,64 +602,200 @@ bool run()
         SerialPrintln(ERROR, "Can't read Glucose!");
 
     // Optional: read sensor raw (unfiltered / filtered) data.
-    if(!readSensor())
-        SerialPrintln(ERROR, "Can't read raw Sensor values!");
+    //if(!readSensor())
+        //SerialPrintln(ERROR, "Can't read raw Sensor values!");
 
     // Optional: read time and glucose of last calibration.
-    if(!readLastCalibration())
-        SerialPrintln(ERROR, "Can't read last calibration data!");
+    //if(!readLastCalibration())
+        //SerialPrintln(ERROR, "Can't read last calibration data!");
 
-    if(needBackfill())
+    /*if(needBackfill())
     {
         forceRegisterNotificationAndIndication(notifyBackfillCallback, pRemoteBackfill, true);                          // Now register on the backfill characteristic.       
         // Read backfill of the last x values to also saves them.
         if(!readBackfill())
             SerialPrintln(ERROR, "Can't read backfill data!");
     }
-    error_current_connection = false;                                                                                   // When we reached this point no error occured.
+    error_current_connection = false;*/                                                                                 // When we reached this point no error occured.
     //Let the Transmitter close the connection.
     //sendDisconnect();
  
-    /*BLE stop, WiFi start and json upload to Nightscout site for test only*/
+///// PONIŻEJ OBSŁUGA UPLOADERA NIGHTSCOUT ODCZYTÓW Z DEXCOM G6 /////
     btStop();
     Serial.print("Connecting to WiFi...\r\n");
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 20);
+    display.println("Connecting to WiFi...");
+    display.display();
     wifiMulti.addAP(AP_SSID, AP_PWD);
-    delay(15000);
-    if (wifiMulti.run() == WL_CONNECTED)
+    wifiMulti.run();
+    while(WL_CONNECTED == false);
     {
       Serial.print("WiFi connected\r\n");
-      Serial.print("ESP32 IP Address: ");
+      Serial.print("ESP32 IP Address:");
       Serial.println(WiFi.localIP());
-      Serial.print("ESP32 MAC Address: ");
+      Serial.print("ESP32 MAC Address:");
       Serial.println(WiFi.macAddress());
+      display.clearDisplay();
+      display.setTextSize(1);
+      display.setTextColor(WHITE);
+      display.setCursor(0, 0);
+      display.println("ESP32 IP Address:");
+      display.setCursor(0, 15);
+      display.println(WiFi.localIP());
+      display.setCursor(0, 30);
+      display.println("ESP32 MAC Address:");
+      display.setCursor(0, 45);
+      display.println(WiFi.macAddress());
+      display.display();
       configTime(0, 0, ntpServer);
       epochTime = (unsigned long long)getTime();
       Serial.print("Epoch Time: ");
       Serial.println((unsigned long long)epochTime);
       postDataToServer();
     }
-    WiFi.mode(WIFI_OFF);
+    //WiFi.mode(WIFI_OFF);
     digitalWrite(ONBOARD_LED,LOW);
-    delay(250000);
+    time_up = 0;
+    do // pętla wykonująca odliczanie czasu 255s do restartu modułu ESP32
+    {
+      if(mytimer.repeat())
+      {
+         while(!timeClient.update()) 
+        {
+          timeClient.forceUpdate();
+        }
+        // The formattedDate comes with the following format:
+        // 2018-05-28T16:00:13Z
+        // We need to extract date and time
+        formattedDate = timeClient.getFormattedDate();
+        Serial.println(formattedDate);
+      
+        // Extract date
+        int splitT = formattedDate.indexOf("T");
+        dayStamp = formattedDate.substring(0, splitT);
+        Serial.print("DATE: ");
+        Serial.println(dayStamp);
+        // Extract time
+        timeStamp = formattedDate.substring(splitT+1, formattedDate.length()-1);
+        Serial.print("HOUR: ");
+        Serial.println(timeStamp);
+        Serial.print("Time_up counter: ");
+        Serial.println(time_up);
+        display.clearDisplay();
+        display.setTextSize(1);
+        display.setTextColor(WHITE);
+        display.setCursor(0, 0);
+        display.println(dayStamp);
+        display.setCursor(75, 0);
+        display.println(timeStamp);
+        display.setCursor(0, 20);
+        display.println("      Dexcom G6      ");
+        display.setCursor(0, 35);
+        display.println(" bluetooth  sleeping ");
+        display.setCursor(0, 50);
+        display.println("  Nightscout Poland  ");
+        display.display();
+        timer_1s = 0;
+      }
+    }
+    while (time_up < 270) ;
+    //if (time_up >= 270)
+      //time_up = 0;
     ESP.restart();
 }
 
 
-/**
- * This is the main loop function.
- */
-void loop() 
+
+
+
+void setup() 
+{
+    pinMode(ONBOARD_LED,OUTPUT);
+    Serial.begin(115200);
+        My_timer = timerBegin(0, 80, true);
+        timerAttachInterrupt(My_timer, &onTimer, true);
+        timerAlarmWrite(My_timer, 1000000, true);
+        timerAlarmEnable(My_timer); //Just Enable
+    Wire.begin(5, 4);     //Start I2C Communication SDA = 5 and SCL = 4 on Wemos Lolin32 ESP32 with built-in SSD1306 OLED
+    //Wire.begin(21, 22);     //Start I2C Communication SDA = 21 and SCL = 22 on ESP32
+    if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C, false, false)) 
+    {
+      Serial.println(F("SSD1306 allocation failed"));
+      for(;;);
+    }
+    display.clearDisplay();
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.setCursor(10, 20);
+    display.println("Dexcom G6");
+    display.display();
+    delay(3000);
+    display.clearDisplay();
+    display.drawBitmap(0, 0, bitmapaNS, 128, 64, 1);
+    display.display();
+    delay(3000);
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    Serial.print("Connecting to...");
+    Serial.println(AP_SSID);
+    WiFi.begin(AP_SSID, AP_PWD);
+    while (WiFi.status() != WL_CONNECTED)
+    {
+      delay(500);
+      Serial.print(".");
+    }
+    Serial.println("");
+    Serial.println("WiFi connected.");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+    timeClient.begin();
+    timeClient.setTimeOffset(7200);
+    mytimer.start();
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 20);
+    display.println("Waiting for Dexcom G6");
+    display.setCursor(0, 40);
+    display.println("bluetooth advertising");
+    display.display();
+    
+    wakeUpRoutine();
+    SerialPrintln(DEBUG, "Starting ESP32 dexcom client application...");
+    
+    BLEDevice::init("");
+    BLEScan* pBLEScan = BLEDevice::getScan();                                                                           // Retrieve a Scanner.
+    pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());                                          // Set the callback to informed when a new device was detected.
+    pBLEScan->setInterval(100); //100 works                                                                             // The time in ms how long each search intervall last. Important for fast scanning so we dont miss the transmitter waking up.
+    pBLEScan->setWindow(99); //60-99 works                                                                              // The actual time that will be searched. Interval - Window = time the esp is doing nothing (used for energy efficiency).
+    pBLEScan->setActiveScan(false);                                                                                     // Possible source of error if we cant connect to the transmitter.                                                                                    // Possible source of error if we cant connect to the transmitter.
+}
+
+
+void loop()
 {
   switch (Status)
   {
-      case STATE_START_SCAN:
-        BLEDevice::getScan()->start(0, true);           // false = maybe helps with connection problems.
-        Status = STATE_SCANNING;
-        break;
+    case STATE_START_SCAN:
+      BLEDevice::getScan()->start(0, true);           // false = maybe helps with connection problems.
+      Status = STATE_SCANNING;
+      break;
 
-      case STATE_SCANNING:
-        if(myDevice != NULL)                            // A device (transmitter) was found by the scan (callback).
-          run();                                        // This function is blocking until all tansmitter communication has finished.
-        break;
+    case STATE_SCANNING:
+      if(myDevice != NULL)                            // A device (transmitter) was found by the scan (callback).
+      {
+        display.clearDisplay();
+        display.setTextSize(2);
+        display.setTextColor(WHITE);
+        display.setCursor(10, 20);
+        display.println("I got it!");
+        display.display();
+        run();                                        // This function is blocking until all tansmitter communication has finished.
+      }
+      break;
   }
 }
